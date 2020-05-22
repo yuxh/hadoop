@@ -1149,7 +1149,10 @@ public class DataNode extends ReconfigurableBase
 
     metrics = DataNodeMetrics.create(conf, getDisplayName());
     metrics.getJvmMetrics().setPauseMonitor(pauseMonitor);
-    
+    //一个集群就有一个BlockPool，联邦机制就会有多个NN，也就是多个联邦，一个联邦就是一个blockpool
+    //假设一个集群：4个NN，两个联邦
+    //联邦一：hadoop1(Active) hadoop2(Standby)(blockPool是同一个)
+    //联邦一：hadoop3(Active) hadoop4(Standby)(blockPool是同一个)
     blockPoolManager = new BlockPoolManager(this);
     blockPoolManager.refreshNamenodes(conf);
 
