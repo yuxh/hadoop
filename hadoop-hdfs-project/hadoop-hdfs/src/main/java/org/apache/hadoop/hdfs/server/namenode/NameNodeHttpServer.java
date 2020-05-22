@@ -117,7 +117,10 @@ public class NameNodeHttpServer {
         httpsAddr = new InetSocketAddress(bindHost, httpsAddr.getPort());
       }
     }
-
+/**
+ * Hadoop喜欢自己封装东西。例如本来就有RPC的服务，但Namenode自己封装了一个HadoopRPC
+ * 这个地方类似，本来已有HttpServer，Hadoop又封装了一个HttpServer2服务
+ */
     HttpServer2.Builder builder = DFSUtil.httpServerTemplateForNNAndJN(conf,
         httpAddr, httpsAddr, "hdfs",
         DFSConfigKeys.DFS_NAMENODE_KERBEROS_INTERNAL_SPNEGO_PRINCIPAL_KEY,
@@ -138,6 +141,7 @@ public class NameNodeHttpServer {
 
     httpServer.setAttribute(NAMENODE_ATTRIBUTE_KEY, nn);
     httpServer.setAttribute(JspHelper.CURRENT_CONF, conf);
+    //TODO 绑定一堆servlet。servlet越多，支持的功能也就越多
     setupServlets(httpServer, conf);
     httpServer.start();
 
@@ -250,8 +254,13 @@ public class NameNodeHttpServer {
         CancelDelegationTokenServlet.class, true);
     httpServer.addInternalServlet("fsck", "/fsck", FsckServlet.class,
         true);
+    //TODO 上传元数据的请求
+    //secondaryNameNode合并出来的FSImage需要替换active namenode的FSImage
+    //发送的就是HTTP请求，请求会转发给这个servlet
     httpServer.addInternalServlet("imagetransfer", ImageServlet.PATH_SPEC,
         ImageServlet.class, true);
+    //TODO 我们可以用50070浏览目录信息，就是因为有这个Servlet
+    //http://hadoop1:50070/listPaths/?path=/user/hive/warehouse
     httpServer.addInternalServlet("listPaths", "/listPaths/*",
         ListPathsServlet.class, false);
     httpServer.addInternalServlet("data", "/data/*",

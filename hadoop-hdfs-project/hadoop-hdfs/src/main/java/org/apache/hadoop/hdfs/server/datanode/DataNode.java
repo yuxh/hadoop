@@ -237,6 +237,7 @@ import com.google.protobuf.BlockingService;
  * the NameNode for something to do.  A NameNode cannot connect
  * to a DataNode directly; a NameNode simply returns values from
  * functions invoked by a DataNode.
+ * datanode启动之后，会跟NN进行心跳，NN收到心跳之后，如果需要这个DN做什么，就给一个返回值（指令）
  *
  * DataNodes maintain an open server socket so that client code 
  * or other DataNodes can read/write data.  The host/port for
@@ -1130,7 +1131,9 @@ public class DataNode extends ReconfigurableBase
     
     // global DN settings
     registerMXBean();
+    //TODO 初始化DataXceiver
     initDataXceiver(conf);
+    //TODO 启动HttpServer
     startInfoServer(conf);
     pauseMonitor = new JvmPauseMonitor(conf);
     pauseMonitor.start();
@@ -2401,6 +2404,7 @@ public class DataNode extends ReconfigurableBase
     DefaultMetricsSystem.initialize("DataNode");
 
     assert locations.size() > 0 : "number of data directories should be > 0";
+    //TODO 重要代码
     return new DataNode(conf, locations, resources);
   }
 

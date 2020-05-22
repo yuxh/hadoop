@@ -201,6 +201,7 @@ import org.apache.hadoop.hdfs.protocol.SnapshotAccessControlException;
 import org.apache.hadoop.hdfs.protocol.SnapshotDiffReport;
 import org.apache.hadoop.hdfs.protocol.SnapshottableDirectoryStatus;
 import org.apache.hadoop.hdfs.protocol.datatransfer.ReplaceDatanodeOnFailure;
+import org.apache.hadoop.hdfs.qjournal.server.JournalNode;
 import org.apache.hadoop.hdfs.security.token.block.BlockTokenSecretManager;
 import org.apache.hadoop.hdfs.security.token.block.BlockTokenSecretManager.AccessMode;
 import org.apache.hadoop.hdfs.security.token.delegation.DelegationTokenIdentifier;
@@ -1055,6 +1056,10 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
     writeLock();
     this.haContext = haContext;
     try {
+      //NameNode 资源检查，通过core-site.xml hdfs-site.xml两个文件，就知道元文件存在哪儿
+      //需要检查三个目录，因为三个目录都涉及到了元数据
+//      1)Namnode 两个目录：存储fsimage的目录，存储editflog的目录。但一般情况下，或者默认使用的同一个目录。
+//      2)JournalNode 里面也有存储元数据的目录
       nnResourceChecker = new NameNodeResourceChecker(conf);
       checkAvailableResources();
       assert safeMode != null && !isPopulatingReplQueues();
@@ -1062,7 +1067,9 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
       prog.beginPhase(Phase.SAFEMODE);
       prog.setTotal(Phase.SAFEMODE, STEP_AWAITING_REPORTED_BLOCKS,
         getCompleteBlocksTotal());
+      //TODO hdfs的安全模式
       setBlockTotal();
+      //TODO 启动重要服务
       blockManager.activate(conf);
     } finally {
       writeUnlock();
@@ -5266,6 +5273,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
      * if DFS is empty or {@link #threshold} == 0
      */
     private boolean needEnter() {
+      //blockSafe 是datanode汇报的数据，正常情况下就是1000
       return (threshold != 0 && blockSafe < blockThreshold) ||
         (datanodeThreshold != 0 && getNumLiveDataNodes() < datanodeThreshold) ||
         (!nameNodeHasResourcesAvailable());
@@ -5320,9 +5328,15 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
       
     /**
      * Set total number of blocks.
+     *
+     * 假设 总block 1003
+     * complete：1000
+     * 正在构建：3
      */
-    private synchronized void setBlockTotal(int total) {
+    private synchronized void  setBlockTotal(int total) {
       this.blockTotal = total;
+      //TODO 计算阈值
+      //举例：1000*0.999 = 999 ，即容忍1个找不到，否则不能脱离安全模式
       this.blockThreshold = (int) (blockTotal * threshold);
       this.blockReplQueueThreshold = 
         (int) (blockTotal * replQueueThreshold);
@@ -5679,6 +5693,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
     SafeModeInfo safeMode = this.safeMode;
     if (safeMode == null)
       return;
+    //获取所有能正常使用的block的个数
     safeMode.setBlockTotal((int)getCompleteBlocksTotal());
   }
 
@@ -5694,11 +5709,16 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
   /**
    * Get the total number of COMPLETE blocks in the system.
    * For safe mode only complete blocks are counted.
+   *
+   * TODO 在hdfs集群里面block的状态分为两种类型：
+   * 1) compelte类型：正常的可用的block
+   * 2) underconstruction类型：处于正在构建的block
    */
   private long getCompleteBlocksTotal() {
     // Calculate number of blocks under construction
     long numUCBlocks = 0;
     readLock();
+    //获取所有正在构建的block
     numUCBlocks = leaseManager.getNumUnderConstructionBlocks();
     try {
       return getBlocksTotal() - numUCBlocks;

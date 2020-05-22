@@ -149,6 +149,8 @@ import static org.apache.hadoop.util.ToolRunner.confirmPrompt;
  * with exposing the IPC interface and the HTTP server to the outside world,
  * plus some configuration management.
  *
+ * 3) FSNameSystem:
+ *      这个类非常重要，管理了HDFS的元数据
  * NameNode implements the
  * {@link org.apache.hadoop.hdfs.protocol.ClientProtocol} interface, which
  * allows clients to ask for DFS services.
@@ -633,7 +635,14 @@ public class NameNode implements NameNodeStatusMXBean {
 
     NameNode.initMetrics(conf, this.getRole());
     StartupProgressMetrics.register(startupProgress);
-
+/**
+ * namenode的启动流程：
+ *      服务段：
+ *        RPCServer
+ *          9000/8020
+ *        HttpServer(RPC的一种 客户端调用服务端代码)
+ *          50070
+ */
     if (NamenodeRole.NAMENODE == role) {
       startHttpServer(conf);
     }
@@ -641,6 +650,11 @@ public class NameNode implements NameNodeStatusMXBean {
     this.spanReceiverHost = SpanReceiverHost.getInstance(conf);
 
     loadNamesystem(conf);
+
+    //TODO 重要，这就是Hadoop RPC
+    // NameNodeRpcServer 里面主要有两个RPC服务：
+    //1)ClientRpcServer 主要管理的协议是：hdfs的客户端（用户）去操作hdfs的方法
+    //2)ServiceRpcServer 主要管理的协议是：服务自己互相进行的方法调用（注册、心跳等）
 
     rpcServer = createRpcServer(conf);
     if (clientNamenodeAddress == null) {
@@ -659,7 +673,9 @@ public class NameNode implements NameNodeStatusMXBean {
     pauseMonitor = new JvmPauseMonitor(conf);
     pauseMonitor.start();
     metrics.getJvmMetrics().setPauseMonitor(pauseMonitor);
-    
+    //TODO 启动一些公共的服务，NameNode的RPC服务就是在里面启动的
+//    1)进行资源检查，检查是否有磁盘足够存储元数据
+//    2)进入安全模式检查，检查是否可以退出安全模式
     startCommonServices(conf);
   }
   
@@ -807,6 +823,7 @@ public class NameNode implements NameNodeStatusMXBean {
     this.haContext = createHAContext();
     try {
       initializeGenericKeys(conf, nsId, namenodeId);
+      //TODO 初始化的代码
       initialize(conf);
       try {
         haContext.writeLock();
@@ -1484,6 +1501,7 @@ public class NameNode implements NameNodeStatusMXBean {
       }
       default: {
         DefaultMetricsSystem.initialize("NameNode");
+        //TODO 关键代码
         return new NameNode(conf);
       }
     }
