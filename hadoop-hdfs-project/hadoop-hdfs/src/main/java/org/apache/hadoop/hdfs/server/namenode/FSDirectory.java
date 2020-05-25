@@ -128,7 +128,12 @@ public class FSDirectory implements Closeable {
   public final static String DOT_INODES_STRING = ".inodes";
   public final static byte[] DOT_INODES = 
       DFSUtil.string2Bytes(DOT_INODES_STRING);
-
+//根目录,即空格
+  /**
+   *  /
+   *    /data1
+   *    /data2
+   */
   INodeDirectory rootDir;
   private final FSNamesystem namesystem;
   private volatile boolean skipQuotaCheck = false; //skip while consuming edits

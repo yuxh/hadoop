@@ -216,6 +216,7 @@ class BPServiceActor implements Runnable {
 
   private void connectToNNAndHandshake() throws IOException {
     // get NN proxy
+    //RPC的客户端
     bpNamenode = dn.connectToNN(nnAddr);
 
     // First phase of the handshake with NN - get the namespace
@@ -689,7 +690,7 @@ class BPServiceActor implements Runnable {
 
         //
         // Every so often, send heartbeat or block-report
-        //
+        //TODO 心跳是每3秒进行一次
         if (startTime - lastHeartbeat >= dnConf.heartBeatInterval) {
           //
           // All heartbeat messages include following info:
@@ -719,6 +720,8 @@ class BPServiceActor implements Runnable {
             }
 
             long startProcessCommands = monotonicNow();
+            //获取到一些NN发送过来的指令
+            //TODO 里面使用了 指令设计模式
             if (!processCommand(resp.getCommands()))
               continue;
             long endProcessCommands = monotonicNow();
@@ -795,6 +798,7 @@ class BPServiceActor implements Runnable {
   void register(NamespaceInfo nsInfo) throws IOException {
     // The handshake() phase loaded the block pool storage
     // off disk - so update the bpRegistration object from that info
+    //TODO 创建注册信息
     bpRegistration = bpos.createRegistration();
 
     LOG.info(this + " beginning handshake with NN");
@@ -802,7 +806,9 @@ class BPServiceActor implements Runnable {
     while (shouldRun()) {
       try {
         // Use returned registration from namenode with updated fields
+        //TODO 调用服务端的registerDatanode方法
         bpRegistration = bpNamenode.registerDatanode(bpRegistration);
+        //如果执行到这儿，说明注册过程已经完成了。
         bpRegistration.setNamespaceInfo(nsInfo);
         break;
       } catch(EOFException e) {  // namenode might have just restarted
@@ -843,12 +849,13 @@ class BPServiceActor implements Runnable {
   @Override
   public void run() {
     LOG.info(this + " starting to offer service");
-
+//TODO 注册+心跳
     try {
       while (true) {
         // init stuff
         try {
           // setup storage
+          //TODO 注册核心代码, 所谓注册就是把主机名和端口告诉对方
           connectToNNAndHandshake();
           break;
         } catch (IOException ioe) {
@@ -871,6 +878,7 @@ class BPServiceActor implements Runnable {
 
       while (shouldRun()) {
         try {
+          //TODO 发送心跳
           offerService();
         } catch (Exception ex) {
           LOG.error("Exception in BPOfferService for " + this, ex);

@@ -452,10 +452,11 @@ public class DatanodeDescriptor extends DatanodeInfo {
       failedStorageInfos = new HashSet<DatanodeStorageInfo>(
           storageMap.values());
     }
-
+//TODO 更改存储的信息
     setCacheCapacity(cacheCapacity);
     setCacheUsed(cacheUsed);
     setXceiverCount(xceiverCount);
+    //TODO 更改上一次的心跳时间。
     setLastUpdate(Time.now());
     setLastUpdateMonotonic(Time.monotonicNow());
     this.volumeFailures = volFailures;

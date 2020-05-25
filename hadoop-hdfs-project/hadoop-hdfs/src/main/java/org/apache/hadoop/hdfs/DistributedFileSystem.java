@@ -1044,6 +1044,7 @@ public class DistributedFileSystem extends FileSystem {
       @Override
       public Boolean doCall(final Path p)
           throws IOException, UnresolvedLinkException {
+        //TODO 重要代码
         return dfs.mkdirs(getPathName(p), permission, createParent);
       }
 

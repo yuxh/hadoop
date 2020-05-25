@@ -43,6 +43,7 @@ class FSDirMkdirOp {
 
   static HdfsFileStatus mkdirs(FSNamesystem fsn, String src,
       PermissionStatus permissions, boolean createParent) throws IOException {
+    //TODO HDFS是如何管理目录树的
     FSDirectory fsd = fsn.getFSDirectory();
     if(NameNode.stateChangeLog.isDebugEnabled()) {
       NameNode.stateChangeLog.debug("DIR* NameSystem.mkdirs: " + src);
@@ -54,19 +55,24 @@ class FSDirMkdirOp {
     byte[][] pathComponents = FSDirectory.getPathComponentsForReservedPath(src);
     fsd.writeLock();
     try {
+      //TODO 解析要创建目录的路径
       src = fsd.resolvePath(pc, src, pathComponents);
       INodesInPath iip = fsd.getINodesInPath4Write(src);
       if (fsd.isPermissionEnabled()) {
         fsd.checkTraverse(pc, iip);
       }
-
+/**
+ * 比如已经存在目录 /user/hive/warehouse
+ * 需要创建的目录是：/user/hive/warehouse/data/mytable
+ * 首先找到最后一个INode，其实就是warehouse这个INode
+ */
       final INode lastINode = iip.getLastINode();
       if (lastINode != null && lastINode.isFile()) {
         throw new FileAlreadyExistsException("Path is not a directory: " + src);
       }
 
       INodesInPath existing = lastINode != null ? iip : iip.getExistingINodes();
-      if (lastINode == null) {
+      if (lastINode == null) { //TODO ????
         if (fsd.isPermissionEnabled()) {
           fsd.checkAncestorAccess(pc, iip, FsAction.WRITE);
         }
@@ -79,10 +85,11 @@ class FSDirMkdirOp {
         // heuristic because the mkdirs() operation might need to
         // create multiple inodes.
         fsn.checkFsObjectLimit();
-
+//需要创建的目录 /data/mytable
         List<String> nonExisting = iip.getPath(existing.length(),
             iip.length() - existing.length());
         int length = nonExisting.size();
+        //TODO 需要创建多级目录走这儿
         if (length > 1) {
           List<String> ancestors = nonExisting.subList(0, length - 1);
           // Ensure that the user can traversal the path by adding implicit
@@ -188,6 +195,8 @@ class FSDirMkdirOp {
       INodesInPath existing, String localName, PermissionStatus perm)
       throws IOException {
     assert fsd.hasWriteLock();
+    //TODO 更新文件目录树，这颗目录树是存在于内存中的，由FSNameSystem管理的
+    //更新内存里面的数据
     existing = unprotectedMkdir(fsd, fsd.allocateNewInodeId(), existing,
         localName.getBytes(Charsets.UTF_8), perm, null, now());
     if (existing == null) {
@@ -200,6 +209,8 @@ class FSDirMkdirOp {
     NameNode.getNameNodeMetrics().incrFilesCreated();
 
     String cur = existing.getPath();
+    //TODO 把元数据信息记录到磁盘上（但一开始先写到内存）
+    //往磁盘上面记录元数据日志
     fsd.getEditLog().logMkDir(cur, newNode);
     if (NameNode.stateChangeLog.isDebugEnabled()) {
       NameNode.stateChangeLog.debug("mkdirs: created directory " + cur);

@@ -420,11 +420,12 @@ public class FSEditLog implements LogsPurgeable {
       
       // wait if an automatic sync is scheduled
       waitIfAutoSyncScheduled();
-      
+      //TODO 步骤一：获取当前独一无二的事务ID
       long start = beginTransaction();
       op.setTransactionId(txid);
 
       try {
+        //TODO 步骤二：把元数据写入到内存缓冲
         editLogStream.write(op);
       } catch (IOException ex) {
         // All journals failed, it is handled in logSync.
@@ -438,9 +439,10 @@ public class FSEditLog implements LogsPurgeable {
       if (!shouldForceSync()) {
         return;
       }
+      //TODO 如果到这儿就说明 缓冲区存满了
       isAutoSyncScheduled = true;
-    }
-    
+    }//释放锁
+    //TODO 数据持久化到磁盘
     // sync buffered edit log entries to persistent store
     logSync();
   }
@@ -484,7 +486,8 @@ public class FSEditLog implements LogsPurgeable {
 
     //
     // record the transactionId when new data was written to the edits log
-    //
+    //保证全局唯一、有序
+    //每个线程进来，自己都有的一个副本
     TransactionId id = myTransactionId.get();
     id.txid = txid;
     return monotonicNow();
@@ -588,7 +591,7 @@ public class FSEditLog implements LogsPurgeable {
       synchronized (this) {
         try {
           printStatistics(false);
-
+//TODO 如果有人已经在刷磁盘了，当前线程就不用刷写磁盘了
           // if somebody is already syncing, then wait
           while (mytxid > synctxid && isSyncRunning) {
             try {
@@ -599,7 +602,9 @@ public class FSEditLog implements LogsPurgeable {
   
           //
           // If this transaction was already flushed, then nothing to do
-          //
+          //TODO 这里判断的该交易是否已刷入磁盘（因为synctxid在flush之后才更改）
+          // 如果在交换内存后，synctxid使用bufReady的交易数量，就能避免缓冲中所有准备写入磁盘的交易做操作，是否效率更高？
+          // 如果可行，bufReady的numTxns能否确定最大的交易号？
           if (mytxid <= synctxid) {
             numTransactionsBatchedInSync++;
             if (metrics != null) {
@@ -619,6 +624,7 @@ public class FSEditLog implements LogsPurgeable {
             if (journalSet.isEmpty()) {
               throw new IOException("No journals available to flush");
             }
+            //TODO 交换内存缓冲
             editLogStream.setReadyToFlush();
           } catch (IOException e) {
             final String msg =
@@ -632,13 +638,14 @@ public class FSEditLog implements LogsPurgeable {
             terminate(1, msg);
           }
         } finally {
-          // Prevent RuntimeException from blocking other log edit write 
+          // Prevent RuntimeException from blocking other log edit write
+          //TODO 恢复标志位 和 唤醒等待的线程
           doneWithAutoSyncScheduling();
         }
         //editLogStream may become null,
         //so store a local variable for flush.
         logStream = editLogStream;
-      }
+      }//TODO 释放锁
       
       // do the sync
       long start = monotonicNow();
@@ -669,6 +676,7 @@ public class FSEditLog implements LogsPurgeable {
       synchronized (this) {
         if (sync) {
           synctxid = syncStart;
+          //TODO 恢复标志位
           isSyncRunning = false;
         }
         this.notifyAll();
@@ -797,6 +805,7 @@ public class FSEditLog implements LogsPurgeable {
    */
   public void logMkDir(String path, INode newNode) {
     PermissionStatus permissions = newNode.getPermissionStatus();
+    //TODO 创建日志对象
     MkdirOp op = MkdirOp.getInstance(cache.get())
       .setInodeId(newNode.getId())
       .setPath(path)

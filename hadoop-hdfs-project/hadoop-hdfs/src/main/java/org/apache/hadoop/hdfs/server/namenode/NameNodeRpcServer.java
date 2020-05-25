@@ -976,6 +976,7 @@ class NameNodeRpcServer implements NamenodeProtocols {
       throw new IOException("mkdirs: Pathname too long.  Limit " 
                             + MAX_PATH_LENGTH + " characters, " + MAX_PATH_DEPTH + " levels.");
     }
+    //TODO 调用FSNameSystem创建目录的方法
     return namesystem.mkdirs(src,
         new PermissionStatus(getRemoteUser().getShortUserName(),
             null, masked), createParent);
@@ -1270,6 +1271,7 @@ class NameNodeRpcServer implements NamenodeProtocols {
       throws IOException {
     checkNNStartup();
     verifySoftwareVersion(nodeReg);
+    //TODO 注册DN
     namesystem.registerDatanode(nodeReg);
     return nodeReg;
   }

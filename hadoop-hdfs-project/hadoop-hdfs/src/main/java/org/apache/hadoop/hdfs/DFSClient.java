@@ -3001,7 +3001,7 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
       LOG.debug(src + ": masked=" + absPermission);
     }
     TraceScope scope = Trace.startSpan("mkdir", traceSampler);
-    try {
+    try { //TODO 走的Hadoop的RPC， 调用服务端的代码
       return namenode.mkdirs(src, absPermission, createParent);
     } catch(RemoteException re) {
       throw re.unwrapRemoteException(AccessControlException.class,

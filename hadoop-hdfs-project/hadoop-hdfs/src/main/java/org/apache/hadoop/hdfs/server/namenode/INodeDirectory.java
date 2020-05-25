@@ -68,7 +68,8 @@ public class INodeDirectory extends INodeWithAdditionalFields
 
   protected static final int DEFAULT_FILES_PER_DIRECTORY = 5;
   final static byte[] ROOT_NAME = DFSUtil.string2Bytes("");
-
+//TODO 这是主要属性，往里面存子节点
+  //目录，文件
   private List<INode> children = null;
   
   /** constructor */

@@ -160,7 +160,7 @@ class BlockPoolManager {
     }
   }
   
-  private void doRefreshNamenodes(
+  private void  doRefreshNamenodes(
       Map<String, Map<String, InetSocketAddress>> addrMap) throws IOException {
     assert Thread.holdsLock(refreshNamenodesLock);
 
@@ -172,6 +172,8 @@ class BlockPoolManager {
       // Step 1. For each of the new nameservices, figure out whether
       // it's an update of the set of NNs for an existing NS,
       // or an entirely new nameservice.
+
+      //如果是联邦，里面就会有多个
       for (String nameserviceId : addrMap.keySet()) {
         if (bpByNameserviceId.containsKey(nameserviceId)) {
           toRefresh.add(nameserviceId);
@@ -196,15 +198,21 @@ class BlockPoolManager {
       if (!toAdd.isEmpty()) {
         LOG.info("Starting BPOfferServices for nameservices: " +
             Joiner.on(",").useForNull("<default>").join(toAdd));
-      
+
+        //TODO 遍历所有的联邦，一个联邦里面会有两个NameNode（HA）
         for (String nsToAdd : toAdd) {
           ArrayList<InetSocketAddress> addrs =
             Lists.newArrayList(addrMap.get(nsToAdd).values());
+          //TODO 重要的关系
+          //一个联邦对应一个BPOfferService
+          //一个联邦里面的一个NN就是一个BPServiceActor
+          //也就是正常来说一个BPOfferService对应两个BPServiceActor
           BPOfferService bpos = createBPOS(addrs);
           bpByNameserviceId.put(nsToAdd, bpos);
           offerServices.add(bpos);
         }
       }
+      //TODO DN向NN进行注册和心跳
       startAll();
     }
 

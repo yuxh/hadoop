@@ -1145,6 +1145,7 @@ public class DataNode extends ReconfigurableBase
     dnUserName = UserGroupInformation.getCurrentUser().getShortUserName();
     LOG.info("dnUserName = " + dnUserName);
     LOG.info("supergroup = " + supergroup);
+    //TODO 初始化RPC的服务
     initIpcServer(conf);
 
     metrics = DataNodeMetrics.create(conf, getDisplayName());
@@ -1154,6 +1155,9 @@ public class DataNode extends ReconfigurableBase
     //联邦一：hadoop1(Active) hadoop2(Standby)(blockPool是同一个)
     //联邦一：hadoop3(Active) hadoop4(Standby)(blockPool是同一个)
     blockPoolManager = new BlockPoolManager(this);
+
+    //TODO 重要
+    // 里面涉及到心跳内容
     blockPoolManager.refreshNamenodes(conf);
 
     // Create the ReadaheadPool from the DataNode context so we can

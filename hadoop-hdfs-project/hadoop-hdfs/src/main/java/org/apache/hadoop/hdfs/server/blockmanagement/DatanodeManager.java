@@ -587,15 +587,18 @@ public class DatanodeManager {
   }
 
   /** Add a datanode. */
+  //TODO 注册DN说白了就是往一堆数据结构里添加信息
   void addDatanode(final DatanodeDescriptor node) {
     // To keep host2DatanodeMap consistent with datanodeMap,
     // remove  from host2DatanodeMap the datanodeDescriptor removed
     // from datanodeMap before adding node to host2DatanodeMap.
     synchronized(datanodeMap) {
+      //TODO datanodeMap里面添加数据
       host2DatanodeMap.remove(datanodeMap.put(node.getDatanodeUuid(), node));
     }
-
+//TODO 往拓扑的数据结构里面加入一条数据
     networktopology.add(node); // may throw InvalidTopologyException
+    //TODO 往内存里面加入一条数据
     host2DatanodeMap.add(node);
     checkIfClusterIsNowMultiRack(node);
 
@@ -973,11 +976,12 @@ public class DatanodeManager {
         networktopology.add(nodeDescr);
         nodeDescr.setSoftwareVersion(nodeReg.getSoftwareVersion());
   
-        // register new datanode
+        //TODO register new datanode
         addDatanode(nodeDescr);
         // also treat the registration message as a heartbeat
         // no need to update its timestamp
         // because its is done when the descriptor is created
+        //TODO 把注册上来的DN加入到HeartbeatManager里面， 后面进行心跳管理
         heartbeatManager.addDatanode(nodeDescr);
         incrementVersionCount(nodeReg.getSoftwareVersion());
         startDecommissioningIfExcluded(nodeDescr);
@@ -1345,6 +1349,8 @@ public class DatanodeManager {
       synchronized (datanodeMap) {
         DatanodeDescriptor nodeinfo = null;
         try {
+          //TODO 从已有datanodeMap里面获取注册过来的DN信息
+          //如果能获取到这个DN的信息说明以前注册过了，但如果是第一次datanodeMap里面就没有信息
           nodeinfo = getDatanode(nodeReg);
         } catch(UnregisteredNodeException e) {
           return new DatanodeCommand[]{RegisterCommand.REGISTER};
@@ -1353,7 +1359,7 @@ public class DatanodeManager {
         // Check if this datanode should actually be shutdown instead. 
         if (nodeinfo != null && nodeinfo.isDisallowed()) {
           setDatanodeDead(nodeinfo);
-          throw new DisallowedDatanodeException(nodeinfo);
+          throw new DisallowedDatanodeException(nodeinfo); 
         }
 
         if (nodeinfo == null || !nodeinfo.isAlive) {
